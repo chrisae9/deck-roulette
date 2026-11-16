@@ -34,6 +34,7 @@ class PluginSettingsTests(unittest.TestCase):
                     "excludedCollectionIds": [],
                     "pinnedSourceIds": ["builtin:installed", "builtin:my-games"],
                     "showGameCounts": True,
+                    "yoloMode": False,
                 },
             )
 
@@ -51,6 +52,7 @@ class PluginSettingsTests(unittest.TestCase):
                     "excludedCollectionIds": ["emulation"],
                     "pinnedSourceIds": ["builtin:installed", "builtin:my-games"],
                     "showGameCounts": True,
+                    "yoloMode": False,
                 },
             )
 
@@ -91,6 +93,7 @@ class PluginSettingsTests(unittest.TestCase):
                     "excludedCollectionIds": ["emulation"],
                     "pinnedSourceIds": ["builtin:installed", "collection:alpha"],
                     "showGameCounts": True,
+                    "yoloMode": False,
                 },
             )
             self.assertEqual(asyncio.run(plugin.get_settings()), saved)
@@ -110,6 +113,13 @@ class PluginSettingsTests(unittest.TestCase):
                 with self.subTest(value=value):
                     saved = asyncio.run(plugin.save_settings({"showGameCounts": value}))
                     self.assertTrue(saved["showGameCounts"])
+
+    def test_yolo_mode_requires_explicit_opt_in(self):
+        with tempfile.TemporaryDirectory() as settings_dir:
+            plugin = self.load_plugin(settings_dir)
+            self.assertFalse(asyncio.run(plugin.save_settings({"yoloMode": "true"}))["yoloMode"])
+            asyncio.run(plugin.save_settings({"yoloMode": True}))
+            self.assertTrue(asyncio.run(plugin.get_settings())["yoloMode"])
 
     def test_legacy_decky_settings_directory_is_supported(self):
         with tempfile.TemporaryDirectory() as settings_dir:
