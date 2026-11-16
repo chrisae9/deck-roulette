@@ -2,7 +2,8 @@ import { describe, expect, test, vi } from "vitest"
 
 import { INSTALLED_SOURCE_ID, MY_GAMES_SOURCE_ID } from "./collectionSettings"
 import { partitionSourcesByPinned, type RouletteSource } from "./gamePools"
-import { loadRollHistory, parseRollHistory, saveRollHistory, sortUnpinnedLists } from "./sortSettings"
+import { loadRollHistory, parseRollHistory, saveRollHistory } from "./rollHistory"
+import { sortUnpinnedLists } from "./sortSettings"
 
 const source = (id: string, label: string, lastPlayed?: number): RouletteSource => ({
 	id: `collection:${id}`,

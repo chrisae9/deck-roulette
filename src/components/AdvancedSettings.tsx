@@ -26,8 +26,8 @@ export const AdvancedSettings = ({ store }: { store: SettingsStore }) => {
 			</PanelSectionRow>
 			<PanelSectionRow>
 				<ToggleField
-					label="Show Sort Button"
-					description="Add a sort control to Browse Other Lists in Quick Access. Pinned shortcuts keep their order."
+					label="Show Quick Access Sort"
+					description="Show the sort menu in Quick Access → Browse Other Lists."
 					checked={settings.showSortButton}
 					disabled={!loaded}
 					onChange={(showSortButton) =>

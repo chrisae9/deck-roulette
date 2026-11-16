@@ -1,4 +1,5 @@
 import type { RouletteSource } from "./gamePools"
+import { getLastRoll, type RollHistory } from "./rollHistory"
 
 export const SORT_MODES = [
 	{ data: "alphabetical", label: "A–Z" },
@@ -7,47 +8,6 @@ export const SORT_MODES = [
 ] as const
 
 export type CollectionSortMode = (typeof SORT_MODES)[number]["data"]
-export type RollHistory = Record<string, number>
-
-const HISTORY_KEY = "deck-roulette-roulette-timestamps"
-
-export const parseRollHistory = (saved: string | null): RollHistory => {
-	try {
-		const parsed: unknown = saved ? JSON.parse(saved) : null
-		if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {}
-
-		return Object.fromEntries(
-			Object.entries(parsed).filter(
-				([, value]) => typeof value === "number" && Number.isFinite(value) && value > 0
-			)
-		)
-	} catch {
-		return {}
-	}
-}
-
-let sessionRollHistory: RollHistory | undefined
-
-export const loadRollHistory = (): RollHistory => {
-	if (sessionRollHistory) return sessionRollHistory
-
-	try {
-		sessionRollHistory = parseRollHistory(globalThis.localStorage.getItem(HISTORY_KEY))
-		return sessionRollHistory
-	} catch {
-		return {}
-	}
-}
-
-export const saveRollHistory = (history: RollHistory) => {
-	// Decky unmounts the panel when Quick Access closes.
-	sessionRollHistory = history
-	try {
-		globalThis.localStorage.setItem(HISTORY_KEY, JSON.stringify(history))
-	} catch {
-		// Keep the current session's history if Steam's storage is unavailable.
-	}
-}
 
 type SortableSource = Pick<RouletteSource, "id" | "kind" | "label" | "collectionId" | "lastPlayed">
 
@@ -61,9 +21,8 @@ export const sortUnpinnedLists = <T extends SortableSource>(
 
 	const recency = (source: SortableSource) => {
 		if (mode === "last-played") return source.lastPlayed ?? 0
-		if (mode === "last-rolled") {
-			// Older builds of the sort fork used the raw Steam collection ID.
-			return lastRolls[source.id] ?? lastRolls[source.collectionId ?? ""] ?? 0
+		if (mode === "last-rolled" && source.collectionId) {
+			return getLastRoll(lastRolls, source.collectionId)
 		}
 		return 0
 	}
