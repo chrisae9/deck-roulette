@@ -15,7 +15,7 @@ import {
 	type RouletteSource,
 	selectableCollections,
 } from "../gamePools"
-import { recordCollectionRoll } from "../rollHistory"
+import { recordRoll } from "../rollHistory"
 import { SETTINGS_ROUTE } from "../routes"
 import { SettingsStore } from "../settingsStore"
 import { useRollHistory } from "../useRollHistory"
@@ -156,9 +156,7 @@ export const QuickAccess = ({ store }: QuickAccessProps) => {
 			lastMainFocusId = source.id
 		}
 		navigateToRandomGame(source.appIds)
-		if (source.collectionId) {
-			recordCollectionRoll(source.collectionId)
-		}
+		recordRoll(source.id)
 	}
 	const sourceLabel = ({ label, appIds }: RouletteSource) =>
 		settings.showGameCounts ? `${label} (${appIds.length})` : label

@@ -21,8 +21,8 @@ export const sortUnpinnedLists = <T extends SortableSource>(
 
 	const recency = (source: SortableSource) => {
 		if (mode === "last-played") return source.lastPlayed ?? 0
-		if (mode === "last-rolled" && source.collectionId) {
-			return getLastRoll(lastRolls, source.collectionId)
+		if (mode === "last-rolled") {
+			return getLastRoll(lastRolls, source)
 		}
 		return 0
 	}

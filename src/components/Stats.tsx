@@ -1,8 +1,8 @@
 import { ButtonItem, ConfirmModal, DialogButton, Field, PanelSection, PanelSectionRow, showModal } from "@decky/ui"
 import { useState } from "react"
 
-import { selectableCollections } from "../gamePools"
-import { clearAllRolls, clearCollectionRoll, getLastRoll } from "../rollHistory"
+import { availableRouletteSources, type RouletteSource } from "../gamePools"
+import { clearAllRolls, clearRoll, getLastRoll } from "../rollHistory"
 import { useRollHistory } from "../useRollHistory"
 import { useSteamCollections } from "../useSteamCollections"
 import { SteamLibraryLoading } from "./SteamLibraryLoading"
@@ -17,32 +17,34 @@ export const Stats = () => {
 	const history = useRollHistory()
 	const [storageError, setStorageError] = useState(false)
 
-	const confirmClear = (collection?: { id: string; displayName: string }) => {
+	const confirmClear = (source?: Pick<RouletteSource, "id" | "collectionId" | "label">) => {
 		showModal(
 			<ConfirmModal
-				strTitle={collection ? "Clear collection stats?" : "Clear all stats?"}
-				strDescription={collection
-					? `Remove the last roll for ${collection.displayName}.`
-					: "Remove the saved roll history for every collection."}
+				strTitle={source ? "Clear roll history for this list?" : "Clear all stats?"}
+				strDescription={source
+					? `Remove the last roll for ${source.label}.`
+					: "Remove the saved roll history for every list."}
 				strOKButtonText="Clear"
 				strCancelButtonText="Cancel"
 				bDestructiveWarning
-				onOK={() => setStorageError(!(collection ? clearCollectionRoll(collection.id) : clearAllRolls()))}
+				onOK={() => setStorageError(!(source ? clearRoll(source) : clearAllRolls()))}
 			/>
 		)
 	}
 
 	if (!collections) return <SteamLibraryLoading />
 
-	const entries = selectableCollections(collections)
-		.map((collection) => ({ ...collection, lastRoll: getLastRoll(history, collection.id) }))
+	const entries = availableRouletteSources(collections, [])
+		.map(({ id, collectionId, label }) => ({
+			id, collectionId, label, lastRoll: getLastRoll(history, { id, collectionId }),
+		}))
 		.filter(({ lastRoll }) => lastRoll > 0)
-		.sort((left, right) => right.lastRoll - left.lastRoll || left.displayName.localeCompare(right.displayName))
+		.sort((left, right) => right.lastRoll - left.lastRoll || left.label.localeCompare(right.label))
 
 	return (
 		<PanelSection title="Roll History">
 			<PanelSectionRow>
-				<div>DeckRoulette saves the most recent roll per collection. Steam play history is separate.</div>
+				<div>DeckRoulette saves the most recent roll for each list. Steam play history is separate.</div>
 			</PanelSectionRow>
 			{storageError && (
 				<PanelSectionRow>
@@ -51,13 +53,13 @@ export const Stats = () => {
 			)}
 			{entries.length === 0 && (
 				<PanelSectionRow>
-					<div>No roll history for your current collections.</div>
+					<div>No rolls recorded yet.</div>
 				</PanelSectionRow>
 			)}
-			{entries.map(({ id, displayName, lastRoll }) => (
+			{entries.map(({ id, collectionId, label, lastRoll }) => (
 				<PanelSectionRow key={id}>
-					<Field label={displayName} description={`Last rolled: ${rollTime.format(lastRoll)}`}>
-						<DialogButton aria-label={`Clear stats for ${displayName}`} onClick={() => confirmClear({ id, displayName })}>
+					<Field label={label} description={`Last rolled: ${rollTime.format(lastRoll)}`}>
+						<DialogButton aria-label={`Clear stats for ${label}`} onClick={() => confirmClear({ id, collectionId, label })}>
 							Clear
 						</DialogButton>
 					</Field>

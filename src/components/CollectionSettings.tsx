@@ -51,11 +51,13 @@ const PinButton = ({
 	label,
 	disabled,
 	onClick,
+	onGamepadDirection,
 }: {
 	pinned: boolean
 	label: string
 	disabled: boolean
 	onClick: () => void
+	onGamepadDirection?: (event: GamepadEvent) => void
 }) => (
 	<DialogButton
 		data-pin-control
@@ -63,6 +65,7 @@ const PinButton = ({
 		aria-label={`${pinned ? "Unpin" : "Pin"} ${label}`}
 		disabled={disabled}
 		onClick={onClick}
+		onGamepadDirection={onGamepadDirection}
 		onOKActionDescription={pinned ? "Unpin" : "Pin"}
 		style={{
 			minWidth: "48px",
@@ -83,12 +86,25 @@ const PinButton = ({
 	</DialogButton>
 )
 
+const moveFocus = (event: GamepadEvent, button?: HTMLButtonElement | null) => {
+	if (!button?.isConnected || button.disabled) return
+
+	button.focus()
+	if (button.ownerDocument.activeElement !== button) return
+
+	button.scrollIntoView({ block: "nearest" })
+	event.preventDefault()
+	event.stopPropagation()
+}
+
 const ShortcutSettings = ({ store }: SettingsPageProps) => {
 	const { settings, loaded, saving, error } = useSettingsStore(store)
 	const collectionStore = useSteamCollections(loaded && settings.collectionSortMode === "last-played")
 	const rollHistory = useRollHistory()
 	const focusTargets = useRef(new Map<string, HTMLDivElement>())
 	const pendingFocusSourceId = useRef<string | undefined>(undefined)
+	const sortRow = useRef<HTMLDivElement>(null)
+	const restoreRow = useRef<HTMLDivElement>(null)
 	const availableSources = collectionStore
 		? availableRouletteSources(collectionStore, settings.excludedCollectionIds)
 		: []
@@ -127,21 +143,30 @@ const ShortcutSettings = ({ store }: SettingsPageProps) => {
 	const rememberAdjacentFocus = (sourceIds: string[], sourceId: string) => {
 		pendingFocusSourceId.current = focusAfterItemRemoval(sourceIds, sourceId)
 	}
-	const focusLastPin = (event: GamepadEvent) => {
-		if (event.detail.button !== GamepadButton.DIR_UP) return
-		const lastPinId = pinnedSources[pinnedSources.length - 1]?.id
-		if (!lastPinId) return
-
-		const button = focusTargets.current.get(lastPinId)
-			?.querySelector<HTMLButtonElement>("[data-pin-control]")
-		if (!button?.isConnected || button.disabled) return
-
-		button.focus()
-		if (button.ownerDocument.activeElement === button) {
-			event.preventDefault()
-			event.stopPropagation()
+	const getPinControl = (sourceId?: string) => sourceId
+		? focusTargets.current.get(sourceId)?.querySelector<HTMLButtonElement>("button[data-pin-control]")
+		: undefined
+	const handleSortDirection = (event: GamepadEvent) => {
+		if (event.detail.button === GamepadButton.DIR_UP) {
+			moveFocus(event, getPinControl(pinnedSources[pinnedSources.length - 1]?.id))
+		}
+		if (event.detail.button === GamepadButton.DIR_DOWN) {
+			moveFocus(event, getPinControl(availableShortcuts[0]?.id))
 		}
 	}
+	const handleAvailableDirection = (event: GamepadEvent, index: number) => {
+		if (event.detail.button === GamepadButton.DIR_UP) {
+			moveFocus(event, index === 0
+				? sortRow.current?.querySelector("button")
+				: getPinControl(availableShortcuts[index - 1]?.id))
+		}
+		if (event.detail.button === GamepadButton.DIR_DOWN) {
+			moveFocus(event, index === availableShortcuts.length - 1
+				? restoreRow.current?.querySelector("button")
+				: getPinControl(availableShortcuts[index + 1]?.id))
+		}
+	}
+
 
 	useEffect(() => {
 		const sourceId = pendingFocusSourceId.current
@@ -259,7 +284,7 @@ const ShortcutSettings = ({ store }: SettingsPageProps) => {
 			<PanelSection title="Available">
 				{loaded && availableShortcuts.length > 0 && (
 					<PanelSectionRow>
-						<Focusable style={{ display: "flex", justifyContent: "flex-end", width: "100%" }} onGamepadDirection={focusLastPin}>
+						<Focusable style={{ display: "flex", justifyContent: "flex-end", width: "100%" }} ref={sortRow} onGamepadDirection={handleSortDirection}>
 							<CollectionSortDropdown
 								mode={settings.collectionSortMode}
 								onChange={(collectionSortMode) =>
@@ -270,7 +295,7 @@ const ShortcutSettings = ({ store }: SettingsPageProps) => {
 					</PanelSectionRow>
 				)}
 				{availableShortcuts.length > 0 ? (
-					availableShortcuts.map((source) => (
+					availableShortcuts.map((source, index) => (
 						<PanelSectionRow key={source.id}>
 							<div
 								ref={registerFocusTarget(source.id)}
@@ -281,6 +306,7 @@ const ShortcutSettings = ({ store }: SettingsPageProps) => {
 										label={source.label}
 										pinned={false}
 										disabled={!loaded}
+										onGamepadDirection={(event) => handleAvailableDirection(event, index)}
 										onClick={() => {
 											rememberAdjacentFocus(
 												availableShortcuts.map(({ id }) => id),
@@ -301,18 +327,27 @@ const ShortcutSettings = ({ store }: SettingsPageProps) => {
 					</PanelSectionRow>
 				)}
 				<PanelSectionRow>
-					<ButtonItem
-						disabled={!loaded || saving}
-						onClick={() =>
-							void store.update((currentSettings) => ({
-								...currentSettings,
-								pinnedSourceIds:
-									createDefaultSettings().pinnedSourceIds,
-							}))
-						}
+					<Focusable
+						ref={restoreRow}
+						style={{ width: "100%" }}
+						onGamepadDirection={(event) => {
+							if (event.detail.button === GamepadButton.DIR_UP) {
+								moveFocus(event, getPinControl(availableShortcuts[availableShortcuts.length - 1]?.id))
+							}
+						}}
 					>
-						Restore Default Shortcuts
-					</ButtonItem>
+						<ButtonItem
+							disabled={!loaded || saving}
+							onClick={() =>
+								void store.update((currentSettings) => ({
+									...currentSettings,
+									pinnedSourceIds: createDefaultSettings().pinnedSourceIds,
+								}))
+							}
+						>
+							Restore Default Shortcuts
+						</ButtonItem>
+					</Focusable>
 				</PanelSectionRow>
 			</PanelSection>
 		</div>

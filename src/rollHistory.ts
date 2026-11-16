@@ -49,24 +49,24 @@ export const saveRollHistory = (history: RollHistory) => {
 	return persisted
 }
 
-const normalizedId = (collectionId: string) => `collection:${collectionId}`
+type RollSource = { id: string; collectionId?: string }
 
-export const getLastRoll = (history: RollHistory, collectionId: string) => {
+export const getLastRoll = (history: RollHistory, source: RollSource) => {
 	// Sort-fork builds saved timestamps with the raw collection ID.
 	const read = (key: string) => Object.prototype.hasOwnProperty.call(history, key)
 		? history[key]
 		: 0
-	return read(normalizedId(collectionId)) || read(collectionId)
+	return read(source.id) || (source.collectionId ? read(source.collectionId) : 0)
 }
 
-export const recordCollectionRoll = (collectionId: string) => {
-	saveRollHistory({ ...loadRollHistory(), [normalizedId(collectionId)]: Date.now() })
+export const recordRoll = (sourceId: string) => {
+	saveRollHistory({ ...loadRollHistory(), [sourceId]: Date.now() })
 }
 
-export const clearCollectionRoll = (collectionId: string) => {
+export const clearRoll = ({ id, collectionId }: RollSource) => {
 	const history = { ...loadRollHistory() }
-	delete history[normalizedId(collectionId)]
-	delete history[collectionId]
+	delete history[id]
+	if (collectionId) delete history[collectionId]
 	return saveRollHistory(history)
 }
 
