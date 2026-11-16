@@ -144,6 +144,8 @@ export const QuickAccess = ({ store }: QuickAccessProps) => {
 		}
 		navigateToRandomGame(source.appIds)
 	}
+	const sourceLabel = ({ label, appIds }: RouletteSource) =>
+		settings.showGameCounts ? `${label} (${appIds.length})` : label
 
 	if (!collectionStore) return <SteamLibraryLoading />
 
@@ -190,7 +192,7 @@ export const QuickAccess = ({ store }: QuickAccessProps) => {
 									disabled={!canRoll(source)}
 									onClick={() => openRandomGame(source)}
 								>
-									{source.label} ({source.appIds.length})
+									{sourceLabel(source)}
 								</ButtonItem>
 							</FocusTarget>
 						</PanelSectionRow>
@@ -227,7 +229,7 @@ export const QuickAccess = ({ store }: QuickAccessProps) => {
 								}
 								onClick={() => openRandomGame(source)}
 							>
-								{source.label} ({source.appIds.length})
+								{sourceLabel(source)}
 							</ButtonItem>
 						</FocusTarget>
 					</PanelSectionRow>

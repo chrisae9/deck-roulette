@@ -2,11 +2,13 @@ export const INSTALLED_SOURCE_ID = "builtin:installed"
 export const MY_GAMES_SOURCE_ID = "builtin:my-games"
 
 export type PluginSettings = {
+	showGameCounts: boolean
 	excludedCollectionIds: string[]
 	pinnedSourceIds: string[]
 }
 
 export const createDefaultSettings = (): PluginSettings => ({
+	showGameCounts: true,
 	excludedCollectionIds: [],
 	pinnedSourceIds: [INSTALLED_SOURCE_ID, MY_GAMES_SOURCE_ID],
 })

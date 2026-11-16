@@ -12,7 +12,7 @@ import {
 	ToggleField,
 } from "@decky/ui"
 import { useEffect, useMemo, useRef, useState } from "react"
-import { FaFilter, FaThumbtack } from "react-icons/fa"
+import { FaCog, FaFilter, FaThumbtack } from "react-icons/fa"
 
 import {
 	createDefaultSettings,
@@ -33,6 +33,7 @@ import { SETTINGS_ROUTE } from "../routes"
 import { SettingsStore } from "../settingsStore"
 import { useSettingsStore } from "../useSettingsStore"
 import { useSteamCollections } from "../useSteamCollections"
+import { AdvancedSettings } from "./AdvancedSettings"
 import { SettingsErrorRow } from "./SettingsErrorRow"
 import { SteamLibraryLoading } from "./SteamLibraryLoading"
 
@@ -388,6 +389,12 @@ export const CollectionSettings = ({ store }: SettingsPageProps) => (
 				content: <ExclusionSettings store={store} />,
 				route: `${SETTINGS_ROUTE}/exclusions`,
 				icon: <FaFilter />,
+			},
+			{
+				title: "Advanced Settings",
+				content: <AdvancedSettings store={store} />,
+				route: `${SETTINGS_ROUTE}/advanced`,
+				icon: <FaCog />,
 			},
 		]}
 	/>
