@@ -5,85 +5,71 @@ import {
 	staticClasses,
 } from "@decky/ui"
 import { definePlugin } from "@decky/api"
-import { Fragment } from "react"
 import { GiPerspectiveDiceSixFacesRandom } from "react-icons/gi"
 
-import { EXCLUDE_COLLECTION_IDS, navigateToRandomGame } from "./utils"
+import { useSteamCollections } from "./useSteamCollections"
+import { navigateToRandomGame } from "./utils"
 
 const DeckRoulette = () => {
-	const { collectionStore }: { collectionStore?: CollectionStore } = window as any
+	const collections = useSteamCollections()
 
-	const collections = collectionStore?.userCollections ?? []
+	if (!collections) {
+		return (
+			<PanelSection title="Random Game">
+				<PanelSectionRow>Waiting for Steam's library…</PanelSectionRow>
+			</PanelSection>
+		)
+	}
 
-	const localGames = collectionStore?.localGamesCollection
-
-	const allInstalled = Array.from(
-		new Set([
-			...(localGames?.visibleApps ?? []).map((app) => app.appid),
-			...(collectionStore?.deckDesktopApps?.visibleApps ?? []).map(
-				(app) => app.appid
-			),
-		])
+	const { localGamesCollection, myGamesCollection, deckDesktopApps, userCollections } =
+		collections
+	const installedAppIds = Array.from(
+		new Set(
+			[
+				...localGamesCollection.visibleApps,
+				...(deckDesktopApps?.visibleApps ?? []),
+			].map((app) => app.appid)
+		)
 	)
-
-	const myGamesCollection = collectionStore?.myGamesCollection
 
 	return (
 		<div>
 			<PanelSection title="Random Game">
-				{localGames ? (
-					<PanelSectionRow>
-						<ButtonItem
-							layout="below"
-							onClick={() =>
-								navigateToRandomGame(allInstalled)
-							}
-						>
-							{localGames.displayName} ({allInstalled.length})
-						</ButtonItem>
-					</PanelSectionRow>
-				) : null}
-				{myGamesCollection ? (
-					<PanelSectionRow>
+				<PanelSectionRow>
+					<ButtonItem
+						layout="below"
+						onClick={() => navigateToRandomGame(installedAppIds)}
+					>
+						{localGamesCollection.displayName} ({installedAppIds.length})
+					</ButtonItem>
+				</PanelSectionRow>
+				<PanelSectionRow>
+					<ButtonItem
+						layout="below"
+						onClick={() =>
+							navigateToRandomGame(
+								myGamesCollection.visibleApps.map((app) => app.appid)
+							)
+						}
+					>
+						{myGamesCollection.displayName} ({myGamesCollection.visibleApps.length})
+					</ButtonItem>
+				</PanelSectionRow>
+			</PanelSection>
+			<PanelSection title="Steam Collections">
+				{userCollections.map((collection) => (
+					<PanelSectionRow key={collection.id}>
 						<ButtonItem
 							layout="below"
 							onClick={() =>
 								navigateToRandomGame(
-									myGamesCollection.visibleApps.map(
-										(app) => app.appid
-									)
+									collection.visibleApps.map((app) => app.appid)
 								)
 							}
 						>
-							{myGamesCollection.displayName} (
-							{myGamesCollection.visibleApps.length})
+							{collection.displayName} ({collection.visibleApps.length})
 						</ButtonItem>
 					</PanelSectionRow>
-				) : null}
-			</PanelSection>
-			<PanelSection title="Steam Collections">
-				{collections.map((collection) => (
-					<Fragment key={collection.id}>
-						{EXCLUDE_COLLECTION_IDS.includes(
-							collection.id
-						) ? null : (
-							<PanelSectionRow>
-								<ButtonItem
-									layout="below"
-									onClick={() =>
-										navigateToRandomGame(
-											collection.visibleApps.map(
-												(app) => app.appid
-											)
-										)
-									}
-								>
-									{collection.displayName} (
-									{collection.visibleApps.length})
-								</ButtonItem>
-							</PanelSectionRow>
-						)}
-					</Fragment>
 				))}
 			</PanelSection>
 		</div>
