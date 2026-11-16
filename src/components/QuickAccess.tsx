@@ -156,7 +156,7 @@ export const QuickAccess = ({ store }: QuickAccessProps) => {
 			lastMainFocusId = source.id
 		}
 		navigateToRandomGame(source.appIds)
-		recordRoll(source.id)
+		recordRoll(source)
 	}
 	const sourceLabel = ({ label, appIds }: RouletteSource) =>
 		settings.showGameCounts ? `${label} (${appIds.length})` : label

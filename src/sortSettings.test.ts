@@ -54,10 +54,10 @@ describe("Quick Access sorting", () => {
 		try {
 			const history = loadRollHistory()
 			expect(sortUnpinnedLists(sources, "last-rolled", history)[2]).toBe(alpha)
-			saveRollHistory({ ...history, [zulu.id]: 200 })
+			saveRollHistory({ ...history, [zulu.id]: { count: 1, lastRoll: 200 } })
 
 			const reopenedHistory = loadRollHistory()
-			expect(reopenedHistory[alpha.id]).toBe(100)
+			expect(reopenedHistory[alpha.id]?.lastRoll).toBe(100)
 			expect(sortUnpinnedLists(sources, "last-rolled", reopenedHistory)[2]).toBe(zulu)
 		} finally {
 			vi.unstubAllGlobals()
@@ -65,7 +65,7 @@ describe("Quick Access sorting", () => {
 	})
 
 	test("last played uses Steam play times; never-played collections follow", () => {
-		expect(sortUnpinnedLists(sources, "last-played", { [bravo.id]: 500 }))
+		expect(sortUnpinnedLists(sources, "last-played", { [bravo.id]: { count: 1, lastRoll: 500 } }))
 			.toEqual([installed, myGames, alpha, zulu, bravo])
 	})
 })

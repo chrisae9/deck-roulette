@@ -1,4 +1,14 @@
-export type RollHistory = Readonly<Record<string, number>>
+export type RollStats = Readonly<{
+	count: number
+	lastRoll: number
+	countIsMinimum?: true
+}>
+
+export type RollHistory = Readonly<Record<string, RollStats>>
+
+const EMPTY_STATS: RollStats = { count: 0, lastRoll: 0 }
+const validTimestamp = (value: unknown): value is number =>
+	typeof value === "number" && Number.isFinite(value) && value > 0 && value <= 8.64e15
 
 const HISTORY_KEY = "deck-roulette-roulette-timestamps"
 const listeners = new Set<() => void>()
@@ -9,12 +19,22 @@ export const parseRollHistory = (saved: string | null): RollHistory => {
 		const parsed: unknown = saved ? JSON.parse(saved) : null
 		if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {}
 
-		return Object.fromEntries(
-			Object.entries(parsed).filter(
-				([, value]) => typeof value === "number" && Number.isFinite(value) &&
-					value > 0 && value <= 8.64e15
-			)
-		)
+		const entries: Array<[string, RollStats]> = []
+		for (const [key, value] of Object.entries(parsed)) {
+			if (validTimestamp(value)) {
+				// Older builds remembered only the last roll. One is a lower bound.
+				entries.push([key, { count: 1, lastRoll: value, countIsMinimum: true }])
+			} else if (value && typeof value === "object" &&
+				Number.isSafeInteger(value.count) && value.count > 0 &&
+				validTimestamp(value.lastRoll)) {
+				entries.push([key, {
+					count: value.count,
+					lastRoll: value.lastRoll,
+					...(value.countIsMinimum === true ? { countIsMinimum: true } : {}),
+				}])
+			}
+		}
+		return Object.fromEntries(entries)
 	} catch {
 		return {}
 	}
@@ -51,16 +71,27 @@ export const saveRollHistory = (history: RollHistory) => {
 
 type RollSource = { id: string; collectionId?: string }
 
-export const getLastRoll = (history: RollHistory, source: RollSource) => {
+export const getRollStats = (history: RollHistory, source: RollSource): RollStats => {
 	// Sort-fork builds saved timestamps with the raw collection ID.
 	const read = (key: string) => Object.prototype.hasOwnProperty.call(history, key)
 		? history[key]
-		: 0
-	return read(source.id) || (source.collectionId ? read(source.collectionId) : 0)
+		: undefined
+	return read(source.id) ?? (source.collectionId ? read(source.collectionId) : undefined) ?? EMPTY_STATS
 }
 
-export const recordRoll = (sourceId: string) => {
-	saveRollHistory({ ...loadRollHistory(), [sourceId]: Date.now() })
+export const getLastRoll = (history: RollHistory, source: RollSource) =>
+	getRollStats(history, source).lastRoll
+
+export const recordRoll = (source: RollSource) => {
+	const history = { ...loadRollHistory() }
+	const previous = getRollStats(history, source)
+	if (source.collectionId) delete history[source.collectionId]
+	history[source.id] = {
+		...previous,
+		count: Math.min(previous.count + 1, Number.MAX_SAFE_INTEGER),
+		lastRoll: Date.now(),
+	}
+	saveRollHistory(history)
 }
 
 export const clearRoll = ({ id, collectionId }: RollSource) => {

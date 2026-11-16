@@ -38,6 +38,7 @@ import { useSettingsStore } from "../useSettingsStore"
 import { useSteamCollections } from "../useSteamCollections"
 import { AdvancedSettings } from "./AdvancedSettings"
 import { CollectionSortDropdown } from "./CollectionSortDropdown"
+import { moveGamepadFocus } from "./moveGamepadFocus"
 import { Stats } from "./Stats"
 import { SettingsErrorRow } from "./SettingsErrorRow"
 import { SteamLibraryLoading } from "./SteamLibraryLoading"
@@ -85,17 +86,6 @@ const PinButton = ({
 		/>
 	</DialogButton>
 )
-
-const moveFocus = (event: GamepadEvent, button?: HTMLButtonElement | null) => {
-	if (!button?.isConnected || button.disabled) return
-
-	button.focus()
-	if (button.ownerDocument.activeElement !== button) return
-
-	button.scrollIntoView({ block: "nearest" })
-	event.preventDefault()
-	event.stopPropagation()
-}
 
 const ShortcutSettings = ({ store }: SettingsPageProps) => {
 	const { settings, loaded, saving, error } = useSettingsStore(store)
@@ -148,20 +138,20 @@ const ShortcutSettings = ({ store }: SettingsPageProps) => {
 		: undefined
 	const handleSortDirection = (event: GamepadEvent) => {
 		if (event.detail.button === GamepadButton.DIR_UP) {
-			moveFocus(event, getPinControl(pinnedSources[pinnedSources.length - 1]?.id))
+			moveGamepadFocus(event, getPinControl(pinnedSources[pinnedSources.length - 1]?.id))
 		}
 		if (event.detail.button === GamepadButton.DIR_DOWN) {
-			moveFocus(event, getPinControl(availableShortcuts[0]?.id))
+			moveGamepadFocus(event, getPinControl(availableShortcuts[0]?.id))
 		}
 	}
 	const handleAvailableDirection = (event: GamepadEvent, index: number) => {
 		if (event.detail.button === GamepadButton.DIR_UP) {
-			moveFocus(event, index === 0
+			moveGamepadFocus(event, index === 0
 				? sortRow.current?.querySelector("button")
 				: getPinControl(availableShortcuts[index - 1]?.id))
 		}
 		if (event.detail.button === GamepadButton.DIR_DOWN) {
-			moveFocus(event, index === availableShortcuts.length - 1
+			moveGamepadFocus(event, index === availableShortcuts.length - 1
 				? restoreRow.current?.querySelector("button")
 				: getPinControl(availableShortcuts[index + 1]?.id))
 		}
@@ -332,7 +322,7 @@ const ShortcutSettings = ({ store }: SettingsPageProps) => {
 						style={{ width: "100%" }}
 						onGamepadDirection={(event) => {
 							if (event.detail.button === GamepadButton.DIR_UP) {
-								moveFocus(event, getPinControl(availableShortcuts[availableShortcuts.length - 1]?.id))
+								moveGamepadFocus(event, getPinControl(availableShortcuts[availableShortcuts.length - 1]?.id))
 							}
 						}}
 					>
