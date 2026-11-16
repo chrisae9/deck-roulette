@@ -5,7 +5,7 @@
 	"type": "module",
 	"packageManager": "pnpm@9.4.0",
 	"scripts": {
-		"build": "rollup -c",
+		"build": "rollup -c && sh scripts/package-licenses.sh",
 		"watch": "rollup -c -w",
 		"typecheck": "tsc --noEmit",
 		"test": "pnpm run typecheck && pnpm run test:frontend && pnpm run test:backend",
