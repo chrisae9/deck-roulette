@@ -1,3 +1,3 @@
 import deckyPlugin from "@decky/rollup"
 
-export default deckyPlugin({})
+export default deckyPlugin({ output: { sourcemapExcludeSources: true } })
