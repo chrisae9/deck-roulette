@@ -13,7 +13,7 @@ export const AdvancedSettings = ({ store }: { store: SettingsStore }) => {
 			<PanelSectionRow>
 				<ToggleField
 					label="Show Game Counts"
-					description="Show how many games each list can pick from in Quick Access."
+					description="Show the number of eligible games next to each list."
 					checked={settings.showGameCounts}
 					disabled={!loaded}
 					onChange={(showGameCounts) =>

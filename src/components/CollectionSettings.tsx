@@ -392,7 +392,6 @@ export const CollectionSettings = ({ store }: SettingsPageProps) => (
 			},
 			{
 				title: "Advanced Settings",
-				hideTitle: true,
 				content: <AdvancedSettings store={store} />,
 				route: `${SETTINGS_ROUTE}/advanced`,
 				icon: <FaCog />,
