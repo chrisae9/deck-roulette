@@ -8,4 +8,5 @@ export const navigateToRandomGame = (appIds: number[]) => {
 	const randomAppId = appIds[randomIndex(appIds.length)]
 	Navigation.Navigate(`/library/app/${randomAppId}`)
 	Navigation.CloseSideMenus()
+	return randomAppId
 }

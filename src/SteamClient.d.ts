@@ -3,6 +3,7 @@
 declare namespace SteamClient {
 	const Apps: {
 		GetAllShortcuts(): Promise<Shortcut[]>
+		RunGame(gameId: string, options: string, launchOption: number, launchSource: number): void
 		RegisterForGameActionStart(
 			callback: (
 				actionType: number,

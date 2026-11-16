@@ -24,6 +24,20 @@ export const AdvancedSettings = ({ store }: { store: SettingsStore }) => {
 					}
 				/>
 			</PanelSectionRow>
+			<PanelSectionRow>
+				<ToggleField
+					label="YOLO Mode"
+					description="Launch installed picks right away. Other picks still open their game page."
+					checked={settings.yoloMode}
+					disabled={!loaded}
+					onChange={(yoloMode) =>
+						void store.update((currentSettings) => ({
+							...currentSettings,
+							yoloMode,
+						}))
+					}
+				/>
+			</PanelSectionRow>
 		</PanelSection>
 	)
 }

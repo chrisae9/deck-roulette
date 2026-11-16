@@ -26,7 +26,9 @@ import {
 	resolveOtherListsFocus,
 	SETTINGS_FOCUS_ID,
 } from "../quickAccessFocus"
+import { readSteamCollections } from "../steamCollections"
 import { navigateToRandomGame } from "../utils"
+import { launchInstalledGame } from "../yoloMode"
 import { SettingsErrorRow } from "./SettingsErrorRow"
 import { SteamLibraryLoading } from "./SteamLibraryLoading"
 
@@ -142,7 +144,18 @@ export const QuickAccess = ({ store }: QuickAccessProps) => {
 		} else {
 			lastMainFocusId = source.id
 		}
-		navigateToRandomGame(source.appIds)
+		const appId = navigateToRandomGame(source.appIds)
+		if (appId === undefined || !loaded || !settings.yoloMode) return
+
+		const steamWindow = window as Window & { collectionStore?: CollectionStore }
+		const currentCollections = readSteamCollections(steamWindow.collectionStore)
+		if (!currentCollections) return
+
+		const installedIds = new Set([
+			...currentCollections.localGamesCollection.visibleApps.map(({ appid }) => appid),
+			...(currentCollections.deckDesktopApps?.visibleApps ?? []).map(({ appid }) => appid),
+		])
+		launchInstalledGame(appId, installedIds)
 	}
 	const sourceLabel = ({ label, appIds }: RouletteSource) =>
 		settings.showGameCounts ? `${label} (${appIds.length})` : label

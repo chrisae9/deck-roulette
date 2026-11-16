@@ -7,6 +7,7 @@ import decky
 
 DEFAULT_SETTINGS = {
     "showGameCounts": True,
+    "yoloMode": False,
     "excludedCollectionIds": [],
     "pinnedSourceIds": ["builtin:installed", "builtin:my-games"],
 }
