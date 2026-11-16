@@ -1,4 +1,4 @@
-const HIDDEN_STEAM_COLLECTION_IDS = ["local-install", "uncategorized"]
+export const HIDDEN_STEAM_COLLECTION_IDS = ["local-install", "uncategorized"]
 
 export type SteamCollectionSnapshot = {
 	id: string

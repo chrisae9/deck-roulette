@@ -1,87 +1,26 @@
-import {
-	ButtonItem,
-	PanelSection,
-	PanelSectionRow,
-	staticClasses,
-} from "@decky/ui"
-import { definePlugin } from "@decky/api"
+import { staticClasses } from "@decky/ui"
+import { definePlugin, routerHook } from "@decky/api"
 import { GiPerspectiveDiceSixFacesRandom } from "react-icons/gi"
 
-import { useSteamCollections } from "./useSteamCollections"
-import { navigateToRandomGame } from "./utils"
-
-const DeckRoulette = () => {
-	const collections = useSteamCollections()
-
-	if (!collections) {
-		return (
-			<PanelSection title="Random Game">
-				<PanelSectionRow>Waiting for Steam's library…</PanelSectionRow>
-			</PanelSection>
-		)
-	}
-
-	const { localGamesCollection, myGamesCollection, deckDesktopApps, userCollections } =
-		collections
-	const installedAppIds = Array.from(
-		new Set(
-			[
-				...localGamesCollection.visibleApps,
-				...(deckDesktopApps?.visibleApps ?? []),
-			].map((app) => app.appid)
-		)
-	)
-
-	return (
-		<div>
-			<PanelSection title="Random Game">
-				<PanelSectionRow>
-					<ButtonItem
-						layout="below"
-						onClick={() => navigateToRandomGame(installedAppIds)}
-					>
-						{localGamesCollection.displayName} ({installedAppIds.length})
-					</ButtonItem>
-				</PanelSectionRow>
-				<PanelSectionRow>
-					<ButtonItem
-						layout="below"
-						onClick={() =>
-							navigateToRandomGame(
-								myGamesCollection.visibleApps.map((app) => app.appid)
-							)
-						}
-					>
-						{myGamesCollection.displayName} ({myGamesCollection.visibleApps.length})
-					</ButtonItem>
-				</PanelSectionRow>
-			</PanelSection>
-			<PanelSection title="Steam Collections">
-				{userCollections.map((collection) => (
-					<PanelSectionRow key={collection.id}>
-						<ButtonItem
-							layout="below"
-							onClick={() =>
-								navigateToRandomGame(
-									collection.visibleApps.map((app) => app.appid)
-								)
-							}
-						>
-							{collection.displayName} ({collection.visibleApps.length})
-						</ButtonItem>
-					</PanelSectionRow>
-				))}
-			</PanelSection>
-		</div>
-	)
-}
+import { CollectionSettings } from "./components/CollectionSettings"
+import { QuickAccess } from "./components/QuickAccess"
+import { SETTINGS_ROUTE } from "./routes"
+import { SettingsStore } from "./settingsStore"
 
 export default definePlugin(() => {
+	const settingsStore = new SettingsStore()
+
+	routerHook.addRoute(SETTINGS_ROUTE, () => (
+		<CollectionSettings store={settingsStore} />
+	))
+
 	return {
 		name: "DeckRoulette",
 		titleView: <div className={staticClasses.Title}>DeckRoulette</div>,
-		content: <DeckRoulette />,
+		content: <QuickAccess store={settingsStore} />,
 		icon: <GiPerspectiveDiceSixFacesRandom />,
-		onDismount() {},
+		onDismount() {
+			routerHook.removeRoute(SETTINGS_ROUTE)
+		},
 	}
 })
