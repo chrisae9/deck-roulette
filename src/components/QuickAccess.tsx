@@ -26,6 +26,7 @@ import {
 	SETTINGS_FOCUS_ID,
 } from "../quickAccessFocus"
 import { navigateToRandomGame } from "../utils"
+import { SettingsErrorRow } from "./SettingsErrorRow"
 import { SteamLibraryLoading } from "./SteamLibraryLoading"
 
 type QuickAccessProps = {
@@ -142,6 +143,7 @@ export const QuickAccess = ({ store }: QuickAccessProps) => {
 					navEntryPreferPosition={NavEntryPositionPreferences.FIRST}
 				>
 					<PanelSection title="Other Game Lists">
+					<SettingsErrorRow error={error} loaded={loaded} onRetry={() => void store.load()} />
 					<PanelSectionRow>
 						<FocusTarget
 							focusRef={preferredFocusTarget}
@@ -173,7 +175,7 @@ export const QuickAccess = ({ store }: QuickAccessProps) => {
 											source.id === preferredOtherFocusId,
 									} as any)}
 									layout="below"
-									disabled={source.appIds.length === 0}
+								disabled={!loaded || source.appIds.length === 0}
 									onClick={() =>
 										openRandomGame(source.id, source.appIds)
 									}
@@ -243,11 +245,7 @@ export const QuickAccess = ({ store }: QuickAccessProps) => {
 				) : null}
 				</PanelSection>
 				<PanelSection title="Settings">
-				{error ? (
-					<PanelSectionRow>
-						<div>{error}</div>
-					</PanelSectionRow>
-				) : null}
+				<SettingsErrorRow error={error} loaded={loaded} onRetry={() => void store.load()} />
 				<PanelSectionRow>
 					<FocusTarget
 						focusRef={preferredFocusTarget}

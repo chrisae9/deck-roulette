@@ -24,6 +24,42 @@ describe("SettingsStore", () => {
 		saveSettingsMock.mockReset()
 	})
 
+	test("does not overwrite existing settings after a failed read; retry restores them", async () => {
+		const existing = {
+			...createDefaultSettings(),
+			pinnedSourceIds: ["collection:party"],
+			excludedCollectionIds: ["emulation"],
+		}
+		let finishRead: (settings: typeof existing) => void = () => undefined
+		getSettingsMock
+			.mockRejectedValueOnce(new Error("settings unavailable"))
+			.mockImplementationOnce(
+				() => new Promise<typeof existing>((resolve) => { finishRead = resolve })
+			)
+		saveSettingsMock.mockImplementation(async (settings) => settings)
+
+		const store = new SettingsStore()
+		const addExclusion = (settings: typeof existing) =>
+			setCollectionExcluded(settings, "finished", true)
+		await store.load()
+		expect(store.getSnapshot()).toMatchObject({ loaded: false, error: expect.any(String) })
+		await store.update(addExclusion)
+		const retry = store.load()
+		await store.load()
+		await store.update(addExclusion)
+		expect(getSettingsMock).toHaveBeenCalledTimes(2)
+		expect(saveSettingsMock).not.toHaveBeenCalled()
+
+		finishRead(existing)
+		await retry
+		expect(store.getSnapshot()).toEqual({ settings: existing, loaded: true, saving: false })
+		await store.update(addExclusion)
+		expect(saveSettingsMock).toHaveBeenCalledExactlyOnceWith({
+			...existing,
+			excludedCollectionIds: ["emulation", "finished"],
+		})
+	})
+
 	test("serializes rapid changes without discarding later input", async () => {
 		const defaults = createDefaultSettings()
 		getSettingsMock.mockResolvedValue(defaults)

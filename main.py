@@ -51,7 +51,7 @@ class Plugin:
             return self._default_settings()
         except (OSError, json.JSONDecodeError):
             decky.logger.exception("Could not read DeckRoulette settings")
-            return self._default_settings()
+            raise
 
     async def save_settings(self, settings: Any) -> dict[str, list[str]]:
         validated_settings = self._validated_settings(settings)

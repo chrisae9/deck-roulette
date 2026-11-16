@@ -7,6 +7,7 @@ import tempfile
 import types
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 from uuid import uuid4
 
 
@@ -50,6 +51,20 @@ class PluginSettingsTests(unittest.TestCase):
                     "pinnedSourceIds": ["builtin:installed", "builtin:my-games"],
                 },
             )
+
+    def test_unreadable_existing_settings_raise_instead_of_returning_defaults(self):
+        with tempfile.TemporaryDirectory() as settings_dir:
+            path = Path(settings_dir, "settings.json")
+            original = json.dumps({"excludedCollectionIds": ["emulation"]})
+            path.write_text(original, encoding="utf-8")
+            plugin = self.load_plugin(settings_dir)
+
+            with self.assertLogs("deck-roulette-test", level="ERROR"):
+                with patch.object(Path, "open", side_effect=PermissionError("settings unavailable")):
+                    with self.assertRaises(PermissionError):
+                        asyncio.run(plugin.get_settings())
+
+            self.assertEqual(path.read_text(encoding="utf-8"), original)
 
     def test_save_deduplicates_ids_and_discards_non_strings(self):
         with tempfile.TemporaryDirectory() as settings_dir:

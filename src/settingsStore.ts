@@ -23,7 +23,7 @@ export class SettingsStore {
 	}
 	private persistedSettings = this.snapshot.settings
 	private listeners = new Set<() => void>()
-	private loadStarted = false
+	private loading = false
 	private pendingSaveCount = 0
 	private saveQueue: Promise<void> = Promise.resolve()
 
@@ -40,8 +40,8 @@ export class SettingsStore {
 	}
 
 	async load() {
-		if (this.loadStarted) return
-		this.loadStarted = true
+		if (this.loading || this.snapshot.loaded) return
+		this.loading = true
 
 		try {
 			const settings = await getSettings()
@@ -50,15 +50,18 @@ export class SettingsStore {
 		} catch {
 			this.setSnapshot({
 				...this.snapshot,
-				loaded: true,
 				error: "Could not load DeckRoulette settings.",
 			})
+		} finally {
+			this.loading = false
 		}
 	}
 
 	async update(
 		updateSettings: (settings: PluginSettings) => PluginSettings
 	) {
+		if (!this.snapshot.loaded) return
+
 		const nextSettings = updateSettings(this.snapshot.settings)
 		this.pendingSaveCount += 1
 		this.setSnapshot({

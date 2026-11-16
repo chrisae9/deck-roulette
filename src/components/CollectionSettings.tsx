@@ -31,18 +31,12 @@ import { SETTINGS_ROUTE } from "../routes"
 import { SettingsStore } from "../settingsStore"
 import { useSettingsStore } from "../useSettingsStore"
 import { useSteamCollections } from "../useSteamCollections"
+import { SettingsErrorRow } from "./SettingsErrorRow"
 import { SteamLibraryLoading } from "./SteamLibraryLoading"
 
 type SettingsPageProps = {
 	store: SettingsStore
 }
-
-const ErrorRow = ({ error }: { error?: string }) =>
-	error ? (
-		<PanelSectionRow>
-			<div>{error}</div>
-		</PanelSectionRow>
-	) : null
 
 const PinButton = ({
 	pinned,
@@ -209,7 +203,7 @@ const ShortcutSettings = ({ store }: SettingsPageProps) => {
 	return (
 		<div>
 			<PanelSection title="Pinned Shortcuts">
-				<ErrorRow error={error} />
+				<SettingsErrorRow error={error} loaded={loaded} onRetry={() => void store.load()} />
 				{pinnedSources.length > 0 ? (
 					<PanelSectionRow>
 						<div style={{ width: "100%" }}>
@@ -298,7 +292,7 @@ const ExclusionSettings = ({ store }: SettingsPageProps) => {
 	return (
 		<div>
 			<PanelSection title="Collection Exclusions">
-				<ErrorRow error={error} />
+				<SettingsErrorRow error={error} loaded={loaded} onRetry={() => void store.load()} />
 				<PanelSectionRow>
 					<div>
 						Turn on a collection to skip its games when rolling from Installed
