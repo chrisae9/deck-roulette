@@ -9,7 +9,7 @@ import {
 	SidebarNavigation,
 	ToggleField,
 } from "@decky/ui"
-import { useEffect, useMemo, useRef } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { FaFilter, FaThumbtack } from "react-icons/fa"
 
 import {
@@ -90,12 +90,16 @@ const ShortcutSettings = ({ store }: SettingsPageProps) => {
 		)
 	const shortcutState = useRef({ loaded, pinnedSources })
 	shortcutState.current = { loaded, pinnedSources }
-	const reorderEntries: ReorderableEntry<string>[] = pinnedSources.map(
-		(source, position) => ({
-			label: source.label,
-			data: source.id,
+	// Decky resets its working order when the entries prop changes identity.
+	const [reorderRevision, setReorderRevision] = useState(0)
+	const pinnedKey = JSON.stringify(pinnedSources.map(({ id, label }) => [id, label]))
+	const reorderEntries = useMemo<ReorderableEntry<string>[]>(() =>
+		(JSON.parse(pinnedKey) as [string, string][]).map(([data, label], position) => ({
+			label,
+			data,
 			position,
-		})
+		})),
+		[pinnedKey, reorderRevision]
 	)
 	const registerFocusTarget =
 		(sourceId: string) => (node: HTMLDivElement | null) => {
@@ -164,7 +168,7 @@ const ShortcutSettings = ({ store }: SettingsPageProps) => {
 				currentSettings.pinnedSourceIds,
 				orderedSourceIds
 			),
-		}))
+		})).finally(() => setReorderRevision((revision) => revision + 1))
 	}
 	// Keep the component type stable so settings updates do not remount focused controls.
 	// shortcutState supplies current values without recreating that component type.

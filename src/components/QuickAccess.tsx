@@ -11,6 +11,7 @@ import { ReactNode, RefObject, useEffect, useRef, useState } from "react"
 import {
 	availableRouletteSources,
 	partitionSourcesByPinned,
+	type RouletteSource,
 	selectableCollections,
 } from "../gamePools"
 import { SETTINGS_ROUTE } from "../routes"
@@ -62,8 +63,17 @@ export const QuickAccess = ({ store }: QuickAccessProps) => {
 	const availableSources = collectionStore
 		? availableRouletteSources(collectionStore, settings.excludedCollectionIds)
 		: []
-	const { pinnedSources, availableSources: otherSources } =
+	const { pinnedSources, availableSources: unpinnedSources } =
 		partitionSourcesByPinned(availableSources, settings.pinnedSourceIds)
+	// Direct collection rolls do not depend on settings. Keep broad rolls
+	// disabled until we can apply the saved exclusions.
+	const settingsUnavailable = !loaded && Boolean(error)
+	const otherSources = settingsUnavailable
+		? availableSources.filter(({ kind }) => kind === "collection")
+		: unpinnedSources
+	const canBrowse = (loaded || settingsUnavailable) && otherSources.length > 0
+	const canRoll = ({ kind, appIds }: RouletteSource) =>
+		appIds.length > 0 && (loaded || (settingsUnavailable && kind === "collection"))
 	const knownCollectionIds = new Set(
 		collections.map((collection) => collection.id)
 	)
@@ -71,17 +81,17 @@ export const QuickAccess = ({ store }: QuickAccessProps) => {
 		knownCollectionIds.has(id)
 	).length
 	const preferredMainFocusId = resolveMainFocus(
-		focusableSourceIds(pinnedSources),
-		otherSources.length > 0,
+		focusableSourceIds(pinnedSources.filter(canRoll)),
+		canBrowse,
 		lastMainFocusId
 	)
 	const preferredOtherFocusId = resolveOtherListsFocus(
-		focusableSourceIds(otherSources),
+		focusableSourceIds(otherSources.filter(canRoll)),
 		lastSelectedOtherSourceId
 	)
 
 	useEffect(() => {
-		if (!loaded || !libraryReady) return
+		if ((!loaded && !settingsUnavailable) || !libraryReady) return
 
 		const root = panelRoot.current
 		const ownerWindow = root?.ownerDocument.defaultView
@@ -107,7 +117,7 @@ export const QuickAccess = ({ store }: QuickAccessProps) => {
 			observer.disconnect()
 			if (timeout !== undefined) ownerWindow.clearTimeout(timeout)
 		}
-	}, [browsingOtherLists, libraryReady, loaded, preferredMainFocusId, preferredOtherFocusId])
+	}, [browsingOtherLists, libraryReady, loaded, settingsUnavailable, preferredMainFocusId, preferredOtherFocusId])
 
 	const openSettings = () => {
 		lastMainFocusId = undefined
@@ -124,13 +134,15 @@ export const QuickAccess = ({ store }: QuickAccessProps) => {
 		quickAccessView = "shortcuts"
 		setBrowsingOtherLists(false)
 	}
-	const openRandomGame = (sourceId: string, appIds: number[]) => {
+	const openRandomGame = (source: RouletteSource) => {
+		if (!canRoll(source)) return
+
 		if (browsingOtherLists) {
-			lastSelectedOtherSourceId = sourceId
+			lastSelectedOtherSourceId = source.id
 		} else {
-			lastMainFocusId = sourceId
+			lastMainFocusId = source.id
 		}
-		navigateToRandomGame(appIds)
+		navigateToRandomGame(source.appIds)
 	}
 
 	if (!collectionStore) return <SteamLibraryLoading />
@@ -175,10 +187,8 @@ export const QuickAccess = ({ store }: QuickAccessProps) => {
 											source.id === preferredOtherFocusId,
 									} as any)}
 									layout="below"
-								disabled={!loaded || source.appIds.length === 0}
-									onClick={() =>
-										openRandomGame(source.id, source.appIds)
-									}
+									disabled={!canRoll(source)}
+									onClick={() => openRandomGame(source)}
 								>
 									{source.label} ({source.appIds.length})
 								</ButtonItem>
@@ -209,13 +219,13 @@ export const QuickAccess = ({ store }: QuickAccessProps) => {
 									preferredFocus: source.id === preferredMainFocusId,
 								} as any)}
 								layout="below"
-								disabled={!loaded || source.appIds.length === 0}
+								disabled={!canRoll(source)}
 								description={
 									loaded && source.appIds.length === 0
 										? "No eligible games in this list."
 										: undefined
 								}
-								onClick={() => openRandomGame(source.id, source.appIds)}
+								onClick={() => openRandomGame(source)}
 							>
 								{source.label} ({source.appIds.length})
 							</ButtonItem>
@@ -234,8 +244,8 @@ export const QuickAccess = ({ store }: QuickAccessProps) => {
 										preferredMainFocusId === BROWSE_FOCUS_ID,
 								} as any)}
 								layout="below"
-								disabled={!loaded}
-								description={`${otherSources.length} unpinned lists`}
+								disabled={!canBrowse}
+								description={settingsUnavailable ? undefined : `${otherSources.length} unpinned lists`}
 								onClick={showOtherLists}
 							>
 								Browse Other Lists…
