@@ -1,14 +1,20 @@
+import type { CollectionSortMode } from "./sortSettings"
+
 export const INSTALLED_SOURCE_ID = "builtin:installed"
 export const MY_GAMES_SOURCE_ID = "builtin:my-games"
 
 export type PluginSettings = {
 	showGameCounts: boolean
+	showSortButton: boolean
+	collectionSortMode: CollectionSortMode
 	excludedCollectionIds: string[]
 	pinnedSourceIds: string[]
 }
 
 export const createDefaultSettings = (): PluginSettings => ({
 	showGameCounts: true,
+	showSortButton: false,
+	collectionSortMode: "alphabetical",
 	excludedCollectionIds: [],
 	pinnedSourceIds: [INSTALLED_SOURCE_ID, MY_GAMES_SOURCE_ID],
 })

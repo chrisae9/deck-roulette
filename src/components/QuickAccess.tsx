@@ -1,5 +1,6 @@
 import {
 	ButtonItem,
+	DropdownItem,
 	Focusable,
 	Navigation,
 	NavEntryPositionPreferences,
@@ -26,6 +27,12 @@ import {
 	resolveOtherListsFocus,
 	SETTINGS_FOCUS_ID,
 } from "../quickAccessFocus"
+import {
+	loadRollHistory,
+	saveRollHistory,
+	SORT_MODES,
+	sortUnpinnedLists,
+} from "../sortSettings"
 import { navigateToRandomGame } from "../utils"
 import { SettingsErrorRow } from "./SettingsErrorRow"
 import { SteamLibraryLoading } from "./SteamLibraryLoading"
@@ -51,12 +58,16 @@ let lastSelectedOtherSourceId: string | undefined
 let lastMainFocusId: string | undefined
 
 export const QuickAccess = ({ store }: QuickAccessProps) => {
-	const collectionStore = useSteamCollections()
-	const libraryReady = collectionStore !== undefined
 	const { settings, loaded, saving, error } = useSettingsStore(store)
+	const sortEnabled = loaded && settings.showSortButton
 	const [browsingOtherLists, setBrowsingOtherLists] = useState(
 		quickAccessView === "other-lists"
 	)
+	const collectionStore = useSteamCollections(
+		browsingOtherLists && sortEnabled && settings.collectionSortMode === "last-played"
+	)
+	const libraryReady = collectionStore !== undefined
+	const [rollHistory, setRollHistory] = useState(loadRollHistory)
 	const panelRoot = useRef<HTMLDivElement>(null)
 	const preferredFocusTarget = useRef<HTMLDivElement>(null)
 	const collections = collectionStore ? selectableCollections(collectionStore) : []
@@ -70,7 +81,9 @@ export const QuickAccess = ({ store }: QuickAccessProps) => {
 	const settingsUnavailable = !loaded && Boolean(error)
 	const otherSources = settingsUnavailable
 		? availableSources.filter(({ kind }) => kind === "collection")
-		: unpinnedSources
+		: browsingOtherLists && sortEnabled
+			? sortUnpinnedLists(unpinnedSources, settings.collectionSortMode, rollHistory)
+			: unpinnedSources
 	const canBrowse = (loaded || settingsUnavailable) && otherSources.length > 0
 	const canRoll = ({ kind, appIds }: RouletteSource) =>
 		appIds.length > 0 && (loaded || (settingsUnavailable && kind === "collection"))
@@ -87,7 +100,9 @@ export const QuickAccess = ({ store }: QuickAccessProps) => {
 	)
 	const preferredOtherFocusId = resolveOtherListsFocus(
 		focusableSourceIds(otherSources.filter(canRoll)),
-		lastSelectedOtherSourceId
+		lastSelectedOtherSourceId,
+		// A sort change must not move gamepad focus from the dropdown into the reordered rows.
+		sortEnabled
 	)
 
 	useEffect(() => {
@@ -143,6 +158,11 @@ export const QuickAccess = ({ store }: QuickAccessProps) => {
 			lastMainFocusId = source.id
 		}
 		navigateToRandomGame(source.appIds)
+		if (sortEnabled && source.kind === "collection") {
+			const history = { ...rollHistory, [source.id]: Date.now() }
+			setRollHistory(history)
+			saveRollHistory(history)
+		}
 	}
 	const sourceLabel = ({ label, appIds }: RouletteSource) =>
 		settings.showGameCounts ? `${label} (${appIds.length})` : label
@@ -177,6 +197,22 @@ export const QuickAccess = ({ store }: QuickAccessProps) => {
 							</ButtonItem>
 						</FocusTarget>
 					</PanelSectionRow>
+					{sortEnabled ? (
+						<PanelSectionRow>
+							<DropdownItem
+								label="Sort by"
+								menuLabel="Sort collections"
+								rgOptions={[...SORT_MODES]}
+								selectedOption={settings.collectionSortMode}
+								disabled={!loaded}
+								onChange={({ data }) => {
+									const mode = SORT_MODES.find((option) => option.data === data)?.data
+									if (!mode) return
+									void store.update((current) => ({ ...current, collectionSortMode: mode }))
+								}}
+							/>
+						</PanelSectionRow>
+					) : null}
 					{otherSources.map((source) => (
 						<PanelSectionRow key={source.id}>
 							<FocusTarget

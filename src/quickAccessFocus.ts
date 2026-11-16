@@ -25,11 +25,12 @@ export const resolveMainFocus = (
 
 export const resolveOtherListsFocus = (
 	otherSourceIds: string[],
-	requestedSourceId?: string
+	requestedSourceId?: string,
+	startAtBack = false
 ) => {
 	if (requestedSourceId && otherSourceIds.includes(requestedSourceId)) {
 		return requestedSourceId
 	}
 
-	return otherSourceIds[0] ?? OTHER_LISTS_BACK_FOCUS_ID
+	return (startAtBack ? undefined : otherSourceIds[0]) ?? OTHER_LISTS_BACK_FOCUS_ID
 }

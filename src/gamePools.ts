@@ -14,6 +14,7 @@ export type RouletteSource = {
 	label: string
 	appIds: number[]
 	collectionId?: string
+	lastPlayed?: number
 }
 
 export const uniqueAppIds = (appIds: number[]) => Array.from(new Set(appIds))
@@ -85,6 +86,7 @@ export const availableRouletteSources = (
 			label: collection.displayName,
 			appIds: uniqueAppIds(collection.visibleApps.map((app) => app.appid)),
 			collectionId: collection.id,
+			lastPlayed: collection.lastPlayed,
 		})),
 	]
 }
