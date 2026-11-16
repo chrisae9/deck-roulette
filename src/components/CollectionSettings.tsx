@@ -2,6 +2,8 @@ import {
 	ButtonItem,
 	DialogButton,
 	Field,
+	GamepadButton,
+	type GamepadEvent,
 	PanelSection,
 	PanelSectionRow,
 	ReorderableEntry,
@@ -43,11 +45,13 @@ const PinButton = ({
 	label,
 	disabled,
 	onClick,
+	onGamepadDirection,
 }: {
 	pinned: boolean
 	label: string
 	disabled: boolean
 	onClick: () => void
+	onGamepadDirection?: (event: GamepadEvent) => void
 }) => (
 	<DialogButton
 		data-pin-control
@@ -55,6 +59,7 @@ const PinButton = ({
 		aria-label={`${pinned ? "Unpin" : "Pin"} ${label}`}
 		disabled={disabled}
 		onClick={onClick}
+		onGamepadDirection={onGamepadDirection}
 		onOKActionDescription={pinned ? "Unpin" : "Pin"}
 		style={{
 			minWidth: "48px",
@@ -93,6 +98,9 @@ const ShortcutSettings = ({ store }: SettingsPageProps) => {
 	// Decky resets its working order when the entries prop changes identity.
 	const [reorderRevision, setReorderRevision] = useState(0)
 	const pinnedKey = JSON.stringify(pinnedSources.map(({ id, label }) => [id, label]))
+	// Mount the new rows immediately when pins change. Keep the same list
+	// instance when only their order changes.
+	const pinnedMembership = JSON.stringify(pinnedSources.map(({ id }) => id).sort())
 	const reorderEntries = useMemo<ReorderableEntry<string>[]>(() =>
 		(JSON.parse(pinnedKey) as [string, string][]).map(([data, label], position) => ({
 			label,
@@ -111,6 +119,21 @@ const ShortcutSettings = ({ store }: SettingsPageProps) => {
 		}
 	const rememberAdjacentFocus = (sourceIds: string[], sourceId: string) => {
 		pendingFocusSourceId.current = focusAfterItemRemoval(sourceIds, sourceId)
+	}
+	const focusLastPin = (event: GamepadEvent) => {
+		if (event.detail.button !== GamepadButton.DIR_UP) return
+		const lastPinId = pinnedSources[pinnedSources.length - 1]?.id
+		if (!lastPinId) return
+
+		const button = focusTargets.current.get(lastPinId)
+			?.querySelector<HTMLButtonElement>("[data-pin-control]")
+		if (!button?.isConnected || button.disabled) return
+
+		button.focus()
+		if (button.ownerDocument.activeElement === button) {
+			event.preventDefault()
+			event.stopPropagation()
+		}
 	}
 
 	useEffect(() => {
@@ -206,12 +229,13 @@ const ShortcutSettings = ({ store }: SettingsPageProps) => {
 
 	return (
 		<div>
-			<PanelSection title="Pinned Shortcuts">
+			<PanelSection title="Pinned">
 				<SettingsErrorRow error={error} loaded={loaded} onRetry={() => void store.load()} />
 				{pinnedSources.length > 0 ? (
 					<PanelSectionRow>
 						<div style={{ width: "100%" }}>
 							<ReorderableList
+								key={pinnedMembership}
 								disableReordering={!loaded || saving}
 								entries={reorderEntries}
 								interactables={PinnedControl}
@@ -225,9 +249,9 @@ const ShortcutSettings = ({ store }: SettingsPageProps) => {
 					</PanelSectionRow>
 				)}
 			</PanelSection>
-			<PanelSection title="Available Shortcuts">
+			<PanelSection title="Available">
 				{availableShortcuts.length > 0 ? (
-					availableShortcuts.map((source) => (
+					availableShortcuts.map((source, index) => (
 						<PanelSectionRow key={source.id}>
 							<div
 								ref={registerFocusTarget(source.id)}
@@ -238,6 +262,7 @@ const ShortcutSettings = ({ store }: SettingsPageProps) => {
 										label={source.label}
 										pinned={false}
 										disabled={!loaded}
+										onGamepadDirection={index === 0 ? focusLastPin : undefined}
 										onClick={() => {
 											rememberAdjacentFocus(
 												availableShortcuts.map(({ id }) => id),
@@ -295,12 +320,13 @@ const ExclusionSettings = ({ store }: SettingsPageProps) => {
 
 	return (
 		<div>
-			<PanelSection title="Collection Exclusions">
+			<PanelSection title="Collections">
 				<SettingsErrorRow error={error} loaded={loaded} onRetry={() => void store.load()} />
 				<PanelSectionRow>
 					<div>
 						Turn on a collection to skip its games when rolling from Installed
-						Games or My Games. You can still roll from that collection directly.
+						Games or My Games. Useful for games you've finished or don't play on Deck.
+						You can still roll from the collection directly.
 						<div style={{ opacity: 0.7, marginTop: "8px" }}>
 							Eligible games: Installed {installedCount} · My Games {myGamesCount}
 						</div>

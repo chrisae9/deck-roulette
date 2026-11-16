@@ -271,7 +271,7 @@ export const QuickAccess = ({ store }: QuickAccessProps) => {
 							description={`${pinnedSources.length} pinned · ${excludedCount} excluded`}
 							onClick={openSettings}
 						>
-							DeckRoulette Settings
+							Advanced Settings
 						</ButtonItem>
 					</FocusTarget>
 				</PanelSectionRow>
