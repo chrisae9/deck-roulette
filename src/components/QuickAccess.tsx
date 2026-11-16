@@ -1,5 +1,6 @@
 import {
 	ButtonItem,
+	DialogButton,
 	Focusable,
 	Navigation,
 	NavEntryPositionPreferences,
@@ -14,8 +15,10 @@ import {
 	type RouletteSource,
 	selectableCollections,
 } from "../gamePools"
+import { recordRoll } from "../rollHistory"
 import { SETTINGS_ROUTE } from "../routes"
 import { SettingsStore } from "../settingsStore"
+import { useRollHistory } from "../useRollHistory"
 import { useSettingsStore } from "../useSettingsStore"
 import { useSteamCollections } from "../useSteamCollections"
 import {
@@ -26,7 +29,9 @@ import {
 	resolveOtherListsFocus,
 	SETTINGS_FOCUS_ID,
 } from "../quickAccessFocus"
+import { sortUnpinnedLists } from "../sortSettings"
 import { navigateToRandomGame } from "../utils"
+import { CollectionSortDropdown } from "./CollectionSortDropdown"
 import { SettingsErrorRow } from "./SettingsErrorRow"
 import { SteamLibraryLoading } from "./SteamLibraryLoading"
 
@@ -51,12 +56,16 @@ let lastSelectedOtherSourceId: string | undefined
 let lastMainFocusId: string | undefined
 
 export const QuickAccess = ({ store }: QuickAccessProps) => {
-	const collectionStore = useSteamCollections()
-	const libraryReady = collectionStore !== undefined
 	const { settings, loaded, saving, error } = useSettingsStore(store)
+	const sortEnabled = loaded && settings.showSortButton
 	const [browsingOtherLists, setBrowsingOtherLists] = useState(
 		quickAccessView === "other-lists"
 	)
+	const collectionStore = useSteamCollections(
+		browsingOtherLists && sortEnabled && settings.collectionSortMode === "last-played"
+	)
+	const libraryReady = collectionStore !== undefined
+	const rollHistory = useRollHistory()
 	const panelRoot = useRef<HTMLDivElement>(null)
 	const preferredFocusTarget = useRef<HTMLDivElement>(null)
 	const collections = collectionStore ? selectableCollections(collectionStore) : []
@@ -70,7 +79,9 @@ export const QuickAccess = ({ store }: QuickAccessProps) => {
 	const settingsUnavailable = !loaded && Boolean(error)
 	const otherSources = settingsUnavailable
 		? availableSources.filter(({ kind }) => kind === "collection")
-		: unpinnedSources
+		: browsingOtherLists && sortEnabled
+			? sortUnpinnedLists(unpinnedSources, settings.collectionSortMode, rollHistory)
+			: unpinnedSources
 	const canBrowse = (loaded || settingsUnavailable) && otherSources.length > 0
 	const canRoll = ({ kind, appIds }: RouletteSource) =>
 		appIds.length > 0 && (loaded || (settingsUnavailable && kind === "collection"))
@@ -87,7 +98,9 @@ export const QuickAccess = ({ store }: QuickAccessProps) => {
 	)
 	const preferredOtherFocusId = resolveOtherListsFocus(
 		focusableSourceIds(otherSources.filter(canRoll)),
-		lastSelectedOtherSourceId
+		lastSelectedOtherSourceId,
+		// A sort change must not move gamepad focus from the dropdown into the reordered rows.
+		sortEnabled
 	)
 
 	useEffect(() => {
@@ -143,6 +156,7 @@ export const QuickAccess = ({ store }: QuickAccessProps) => {
 			lastMainFocusId = source.id
 		}
 		navigateToRandomGame(source.appIds)
+		recordRoll(source)
 	}
 	const sourceLabel = ({ label, appIds }: RouletteSource) =>
 		settings.showGameCounts ? `${label} (${appIds.length})` : label
@@ -159,23 +173,43 @@ export const QuickAccess = ({ store }: QuickAccessProps) => {
 					<PanelSection title="Other Game Lists">
 					<SettingsErrorRow error={error} loaded={loaded} onRetry={() => void store.load()} />
 					<PanelSectionRow>
-						<FocusTarget
-							focusRef={preferredFocusTarget}
-							preferred={
-								preferredOtherFocusId === OTHER_LISTS_BACK_FOCUS_ID
-							}
-						>
-							<ButtonItem
-								{...({
-									preferredFocus:
-										preferredOtherFocusId === OTHER_LISTS_BACK_FOCUS_ID,
-								} as any)}
-								layout="below"
-								onClick={showShortcuts}
-							>
-								← Back to Shortcuts
-							</ButtonItem>
-						</FocusTarget>
+						<Focusable flow-children="row" style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%" }}>
+							<div style={{ flex: 1, minWidth: 0 }}>
+								<FocusTarget
+									focusRef={preferredFocusTarget}
+									preferred={preferredOtherFocusId === OTHER_LISTS_BACK_FOCUS_ID}
+								>
+									{sortEnabled ? (
+										<DialogButton
+											aria-label="Back to Shortcuts"
+											onOKActionDescription="Back to Shortcuts"
+											onClick={showShortcuts}
+											style={{ minWidth: 0, width: "100%", height: "40px", padding: "0 6px", whiteSpace: "nowrap" }}
+										>
+											← Back
+										</DialogButton>
+									) : (
+										<ButtonItem
+											{...({
+												preferredFocus: preferredOtherFocusId === OTHER_LISTS_BACK_FOCUS_ID,
+											} as any)}
+											layout="below"
+											onClick={showShortcuts}
+										>
+											← Back to Shortcuts
+										</ButtonItem>
+									)}
+								</FocusTarget>
+							</div>
+							{sortEnabled && (
+								<CollectionSortDropdown
+									mode={settings.collectionSortMode}
+									onChange={(collectionSortMode) =>
+										void store.update((current) => ({ ...current, collectionSortMode }))
+									}
+								/>
+							)}
+						</Focusable>
 					</PanelSectionRow>
 					{otherSources.map((source) => (
 						<PanelSectionRow key={source.id}>

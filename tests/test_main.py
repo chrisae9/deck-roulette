@@ -34,6 +34,8 @@ class PluginSettingsTests(unittest.TestCase):
                     "excludedCollectionIds": [],
                     "pinnedSourceIds": ["builtin:installed", "builtin:my-games"],
                     "showGameCounts": True,
+                    "showSortButton": False,
+                    "collectionSortMode": "alphabetical",
                 },
             )
 
@@ -51,6 +53,8 @@ class PluginSettingsTests(unittest.TestCase):
                     "excludedCollectionIds": ["emulation"],
                     "pinnedSourceIds": ["builtin:installed", "builtin:my-games"],
                     "showGameCounts": True,
+                    "showSortButton": False,
+                    "collectionSortMode": "alphabetical",
                 },
             )
 
@@ -91,6 +95,8 @@ class PluginSettingsTests(unittest.TestCase):
                     "excludedCollectionIds": ["emulation"],
                     "pinnedSourceIds": ["builtin:installed", "collection:alpha"],
                     "showGameCounts": True,
+                    "showSortButton": False,
+                    "collectionSortMode": "alphabetical",
                 },
             )
             self.assertEqual(asyncio.run(plugin.get_settings()), saved)
@@ -119,6 +125,25 @@ class PluginSettingsTests(unittest.TestCase):
                 asyncio.run(plugin.get_settings())["pinnedSourceIds"],
                 ["builtin:installed", "builtin:my-games"],
             )
+
+    def test_sort_choice_and_opt_in_survive_reload(self):
+        with tempfile.TemporaryDirectory() as settings_dir:
+            plugin = self.load_plugin(settings_dir)
+            asyncio.run(plugin.save_settings({
+                "showSortButton": True,
+                "collectionSortMode": "last-rolled",
+            }))
+
+            settings = asyncio.run(self.load_plugin(settings_dir).get_settings())
+            self.assertTrue(settings["showSortButton"])
+            self.assertEqual(settings["collectionSortMode"], "last-rolled")
+
+            settings = asyncio.run(plugin.save_settings({
+                "showSortButton": "yes",
+                "collectionSortMode": "unsupported-order",
+            }))
+            self.assertFalse(settings["showSortButton"])
+            self.assertEqual(settings["collectionSortMode"], "alphabetical")
 
 
 if __name__ == "__main__":

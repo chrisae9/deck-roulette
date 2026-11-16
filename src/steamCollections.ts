@@ -4,6 +4,7 @@ export type SteamCollectionSnapshot = {
 	id: string
 	displayName: string
 	visibleApps: Pick<SteamAppOverview, "appid">[]
+	lastPlayed?: number
 }
 
 export type SteamCollectionsSnapshot = {
@@ -13,23 +14,42 @@ export type SteamCollectionsSnapshot = {
 	deckDesktopApps?: SteamCollectionSnapshot
 }
 
+const readPlayTime = (app: SteamAppOverview) => {
+	try {
+		const time = app.rt_last_time_played
+		return Number.isFinite(time) ? time : 0
+	} catch {
+		// Play history is optional; a missing value must not block a roll.
+		return 0
+	}
+}
+
 const readCollection = (
-	collection: SteamCollection | undefined
+	collection: SteamCollection | undefined,
+	includeLastPlayed = false
 ): SteamCollectionSnapshot | undefined => {
 	if (!collection) return undefined
 
 	const { id, displayName, visibleApps } = collection
 	if (!Array.isArray(visibleApps)) return undefined
 
+	let lastPlayed = 0
+	const apps = visibleApps.map((app) => {
+		if (includeLastPlayed) lastPlayed = Math.max(lastPlayed, readPlayTime(app))
+		return { appid: app.appid }
+	})
+
 	return {
 		id,
 		displayName,
-		visibleApps: visibleApps.map(({ appid }) => ({ appid })),
+		visibleApps: apps,
+		...(includeLastPlayed ? { lastPlayed } : {}),
 	}
 }
 
 export const readSteamCollections = (
-	store?: CollectionStore
+	store?: CollectionStore,
+	includeLastPlayed = false
 ): SteamCollectionsSnapshot | undefined => {
 	try {
 		if (!store) return undefined
@@ -51,7 +71,7 @@ export const readSteamCollections = (
 		const collections: SteamCollectionSnapshot[] = []
 		for (const collection of userCollections) {
 			if (HIDDEN_STEAM_COLLECTION_IDS.includes(collection.id)) continue
-			const snapshot = readCollection(collection)
+			const snapshot = readCollection(collection, includeLastPlayed)
 			if (!snapshot) return undefined
 			collections.push(snapshot)
 		}

@@ -17,6 +17,8 @@ describe("collection settings", () => {
 	test("pins Installed and My Games by default", () => {
 		expect(createDefaultSettings()).toEqual({
 			showGameCounts: true,
+			showSortButton: false,
+			collectionSortMode: "alphabetical",
 			excludedCollectionIds: [],
 			pinnedSourceIds: [INSTALLED_SOURCE_ID, MY_GAMES_SOURCE_ID],
 		})
