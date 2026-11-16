@@ -26,15 +26,22 @@ export const parseRollHistory = (saved: string | null): RollHistory => {
 	}
 }
 
+let sessionRollHistory: RollHistory | undefined
+
 export const loadRollHistory = (): RollHistory => {
+	if (sessionRollHistory) return sessionRollHistory
+
 	try {
-		return parseRollHistory(globalThis.localStorage.getItem(HISTORY_KEY))
+		sessionRollHistory = parseRollHistory(globalThis.localStorage.getItem(HISTORY_KEY))
+		return sessionRollHistory
 	} catch {
 		return {}
 	}
 }
 
 export const saveRollHistory = (history: RollHistory) => {
+	// Decky unmounts the panel when Quick Access closes.
+	sessionRollHistory = history
 	try {
 		globalThis.localStorage.setItem(HISTORY_KEY, JSON.stringify(history))
 	} catch {

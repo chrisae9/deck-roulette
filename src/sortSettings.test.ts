@@ -1,8 +1,8 @@
-import { describe, expect, test } from "vitest"
+import { describe, expect, test, vi } from "vitest"
 
 import { INSTALLED_SOURCE_ID, MY_GAMES_SOURCE_ID } from "./collectionSettings"
 import { partitionSourcesByPinned, type RouletteSource } from "./gamePools"
-import { parseRollHistory, sortUnpinnedLists } from "./sortSettings"
+import { loadRollHistory, parseRollHistory, saveRollHistory, sortUnpinnedLists } from "./sortSettings"
 
 const source = (id: string, label: string, lastPlayed?: number): RouletteSource => ({
 	id: `collection:${id}`,
@@ -42,6 +42,25 @@ describe("Quick Access sorting", () => {
 		expect(history).not.toHaveProperty("bad")
 		expect(sortUnpinnedLists(sources, "last-rolled", history))
 			.toEqual([installed, myGames, zulu, alpha, bravo])
+	})
+
+	test("remembers a roll across Quick Access mounts when storage rejects a write", () => {
+		vi.stubGlobal("localStorage", {
+			getItem: () => '{"collection:a":100}',
+			setItem: () => { throw new Error("Storage is full") },
+		})
+
+		try {
+			const history = loadRollHistory()
+			expect(sortUnpinnedLists(sources, "last-rolled", history)[2]).toBe(alpha)
+			saveRollHistory({ ...history, [zulu.id]: 200 })
+
+			const reopenedHistory = loadRollHistory()
+			expect(reopenedHistory[alpha.id]).toBe(100)
+			expect(sortUnpinnedLists(sources, "last-rolled", reopenedHistory)[2]).toBe(zulu)
+		} finally {
+			vi.unstubAllGlobals()
+		}
 	})
 
 	test("last played uses Steam play times; never-played collections follow", () => {
