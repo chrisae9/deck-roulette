@@ -33,6 +33,7 @@ class PluginSettingsTests(unittest.TestCase):
                 {
                     "excludedCollectionIds": [],
                     "pinnedSourceIds": ["builtin:installed", "builtin:my-games"],
+                    "showGameCounts": True,
                 },
             )
 
@@ -49,6 +50,7 @@ class PluginSettingsTests(unittest.TestCase):
                 {
                     "excludedCollectionIds": ["emulation"],
                     "pinnedSourceIds": ["builtin:installed", "builtin:my-games"],
+                    "showGameCounts": True,
                 },
             )
 
@@ -88,10 +90,26 @@ class PluginSettingsTests(unittest.TestCase):
                 {
                     "excludedCollectionIds": ["emulation"],
                     "pinnedSourceIds": ["builtin:installed", "collection:alpha"],
+                    "showGameCounts": True,
                 },
             )
             self.assertEqual(asyncio.run(plugin.get_settings()), saved)
             self.assertFalse(Path(settings_dir, "settings.tmp").exists())
+
+    def test_game_counts_can_be_disabled_and_persisted(self):
+        with tempfile.TemporaryDirectory() as settings_dir:
+            plugin = self.load_plugin(settings_dir)
+            saved = asyncio.run(plugin.save_settings({"showGameCounts": False}))
+            self.assertFalse(saved["showGameCounts"])
+            self.assertFalse(asyncio.run(plugin.get_settings())["showGameCounts"])
+
+    def test_invalid_game_count_preference_uses_default(self):
+        with tempfile.TemporaryDirectory() as settings_dir:
+            plugin = self.load_plugin(settings_dir)
+            for value in ("false", 0, None, []):
+                with self.subTest(value=value):
+                    saved = asyncio.run(plugin.save_settings({"showGameCounts": value}))
+                    self.assertTrue(saved["showGameCounts"])
 
     def test_legacy_decky_settings_directory_is_supported(self):
         with tempfile.TemporaryDirectory() as settings_dir:

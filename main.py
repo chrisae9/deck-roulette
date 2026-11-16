@@ -6,6 +6,7 @@ import decky
 
 
 DEFAULT_SETTINGS = {
+    "showGameCounts": True,
     "excludedCollectionIds": [],
     "pinnedSourceIds": ["builtin:installed", "builtin:my-games"],
 }
@@ -17,18 +18,23 @@ if SETTINGS_DIR is None:
 class Plugin:
     settings_path = Path(SETTINGS_DIR) / "settings.json"
 
-    def _default_settings(self) -> dict[str, list[str]]:
+    def _default_settings(self) -> dict[str, list[str] | bool]:
         return {
-            key: list(value)
+            key: list(value) if isinstance(value, list) else value
             for key, value in DEFAULT_SETTINGS.items()
         }
 
-    def _validated_settings(self, settings: Any) -> dict[str, list[str]]:
+    def _validated_settings(self, settings: Any) -> dict[str, list[str] | bool]:
         if not isinstance(settings, dict):
             return self._default_settings()
 
-        validated_settings: dict[str, list[str]] = {}
+        validated_settings: dict[str, list[str] | bool] = {}
         for key, default_ids in DEFAULT_SETTINGS.items():
+            if isinstance(default_ids, bool):
+                value = settings.get(key, default_ids)
+                validated_settings[key] = value if isinstance(value, bool) else default_ids
+                continue
+
             ids = settings.get(key, default_ids)
             if not isinstance(ids, list):
                 ids = default_ids
@@ -43,7 +49,7 @@ class Plugin:
 
         return validated_settings
 
-    async def get_settings(self) -> dict[str, list[str]]:
+    async def get_settings(self) -> dict[str, list[str] | bool]:
         try:
             with self.settings_path.open(encoding="utf-8") as settings_file:
                 return self._validated_settings(json.load(settings_file))
@@ -53,7 +59,7 @@ class Plugin:
             decky.logger.exception("Could not read DeckRoulette settings")
             raise
 
-    async def save_settings(self, settings: Any) -> dict[str, list[str]]:
+    async def save_settings(self, settings: Any) -> dict[str, list[str] | bool]:
         validated_settings = self._validated_settings(settings)
         self.settings_path.parent.mkdir(parents=True, exist_ok=True)
         temporary_path = self.settings_path.with_suffix(".tmp")
