@@ -8,7 +8,7 @@ export const AdvancedSettings = ({ store }: { store: SettingsStore }) => {
 	const { settings, loaded, error } = useSettingsStore(store)
 
 	return (
-		<PanelSection title="Advanced Settings">
+		<PanelSection>
 			<SettingsErrorRow error={error} loaded={loaded} onRetry={() => void store.load()} />
 			<PanelSectionRow>
 				<ToggleField
